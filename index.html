@@ -170,6 +170,7 @@
   .summary-item .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-soft); font-weight: 600; margin-bottom: 1px; }
   .summary-item .value { font-size: 15px; font-weight: 600; }
   .summary-item.grand .value { font-size: 20px; font-weight: 700; color: var(--warm-strong); }
+  .summary-item .note { font-size: 11px; color: var(--ink-soft); max-width: 26ch; margin-top: 2px; }
   .summary-divider { width: 1px; align-self: stretch; background: var(--line); }
 
   @media (max-width: 720px) {
@@ -240,6 +241,7 @@
       <div class="summary-item">
         <div class="label" id="deliveryLabel">Delivery (Oahu, min $100)</div>
         <div class="value mono" id="sumDelivery">$0.00</div>
+        <div class="note" id="deliveryNote" hidden>Shipping costs will be billed based on the actual charges incurred at fulfillment.</div>
       </div>
       <div class="summary-divider"></div>
       <div class="summary-item grand">
@@ -261,8 +263,6 @@
   var TAX_RATE = 0.04712;
   var OAHU_RATE = 0.03;
   var OAHU_MIN = 100;
-  var NEIGHBOR_RATE = 0.04;
-  var NEIGHBOR_MIN = 1000;
 
   var rowsBody = document.getElementById("rowsBody");
   var rowCounter = 0;
@@ -445,6 +445,7 @@
   var islandNeighbor = document.getElementById("islandNeighbor");
   var islandGroup = document.getElementById("islandGroup");
   var deliveryLabel = document.getElementById("deliveryLabel");
+  var deliveryNote = document.getElementById("deliveryNote");
 
   function updateIslandGroupState() {
     islandGroup.classList.toggle("disabled", !fulfillDelivery.checked);
@@ -456,10 +457,10 @@
 
     var delivery = 0;
     var label = "Pickup at 905 Umi St";
+    var shippingTbd = fulfillDelivery.checked && islandNeighbor.checked;
     if (fulfillDelivery.checked) {
-      if (islandNeighbor.checked) {
-        delivery = subtotal > 0 ? Math.max(NEIGHBOR_MIN, (subtotal + tax) * NEIGHBOR_RATE) : 0;
-        label = "Delivery (Neighbor Island, min $1,000)";
+      if (shippingTbd) {
+        label = "Delivery (Neighbor Island)";
       } else {
         delivery = subtotal > 0 ? Math.max(OAHU_MIN, (subtotal + tax) * OAHU_RATE) : 0;
         label = "Delivery (Oahu, min $100)";
@@ -470,7 +471,8 @@
     deliveryLabel.textContent = label;
     document.getElementById("sumSubtotal").textContent = fmt.format(subtotal);
     document.getElementById("sumTax").textContent = fmt.format(tax);
-    document.getElementById("sumDelivery").textContent = fmt.format(delivery);
+    document.getElementById("sumDelivery").textContent = shippingTbd ? "TBD" : fmt.format(delivery);
+    deliveryNote.hidden = !shippingTbd;
     document.getElementById("sumGrand").textContent = fmt.format(grand);
   }
 
