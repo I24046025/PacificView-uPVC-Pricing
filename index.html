@@ -147,6 +147,13 @@
   .add-row-btn:hover { background: var(--surface-alt); }
   .add-row-btn:focus-visible { outline: 2px solid var(--focus); }
   .row-count { color: var(--ink-soft); font-size: 12px; }
+  .foot-right { display: flex; align-items: center; gap: 14px; }
+  .save-pdf-btn {
+    background: var(--accent-strong); border: 1px solid var(--accent-strong); color: #fff; font-weight: 600; font-size: 13px;
+    padding: 7px 14px; border-radius: 7px; cursor: pointer;
+  }
+  .save-pdf-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .save-pdf-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
   .fulfillment-bar {
     display: flex; flex-wrap: wrap; gap: 10px 32px; align-items: center;
@@ -172,9 +179,11 @@
   .summary-item.grand .value { font-size: 20px; font-weight: 700; color: var(--warm-strong); }
   .summary-item .note { font-size: 11px; color: var(--ink-soft); max-width: 26ch; margin-top: 2px; }
   .summary-divider { width: 1px; align-self: stretch; background: var(--line); }
+  .summary-disclaimer { margin: 0 auto 0 0; font-size: 12px; font-style: italic; color: var(--ink-soft); }
 
   @media (max-width: 720px) {
     .summary-bar { justify-content: space-between; }
+    .summary-disclaimer { flex-basis: 100%; }
   }
 
 </style>
@@ -198,7 +207,7 @@
           <tr>
             <th></th>
             <th class="col-op">Operation</th>
-            <th class="col-size">Size (W × H)</th>
+            <th class="col-size">Size (W × H, in)</th>
             <th class="col-color">Color</th>
             <th class="col-glass">Glass</th>
             <th class="num col-qty">Qty</th>
@@ -212,7 +221,10 @@
     </div>
     <div class="table-foot">
       <button class="add-row-btn" id="addRowBtn" type="button">+ Add line</button>
-      <span class="row-count" id="rowCount"></span>
+      <div class="foot-right">
+        <span class="row-count" id="rowCount"></span>
+        <button class="save-pdf-btn" id="savePdfBtn" type="button">Export Quote</button>
+      </div>
     </div>
 
     <div class="fulfillment-bar">
@@ -228,6 +240,7 @@
     </div>
 
     <div class="summary-bar">
+      <p class="summary-disclaimer">All prices exclude installation.</p>
       <div class="summary-item">
         <div class="label">Subtotal</div>
         <div class="value mono" id="sumSubtotal">$0.00</div>
@@ -252,11 +265,13 @@
   </section>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 (function () {
   "use strict";
 
-  var DATA = {"operations": ["Sliding (Window)", "OXO Sliding", "Single Hung", "Double Hung", "Awning", "Casement (Window)", "Sliding (Door)", "Casement (Door)"], "prices": {"Sliding (Window)": [{"label": "35.5 x 11.5", "white": 154.01, "black": 167.4, "custom": 230.18}, {"label": "23.5 x 23.5", "white": 154.01, "black": 167.4, "custom": 230.18}, {"label": "35.5 x 23.5", "white": 183.82, "black": 199.8, "custom": 274.73}, {"label": "47.5 x 23.5", "white": 218.59, "black": 237.6, "custom": 326.7}, {"label": "35.5 x 35.5", "white": 228.53, "black": 248.4, "custom": 341.55}, {"label": "35.5 x 47.5", "white": 278.21, "black": 302.4, "custom": 415.8}, {"label": "47.5 x 35.5", "white": 273.24, "black": 297.0, "custom": 408.38}, {"label": "47.5 x 41.5", "white": 308.02, "black": 334.8, "custom": 460.35}, {"label": "59.5 x 35.5", "white": 322.92, "black": 351.0, "custom": 482.63}, {"label": "47.5 x 47.5", "white": 337.82, "black": 367.2, "custom": 504.9}, {"label": "59.5 x 41.5", "white": 362.66, "black": 394.2, "custom": 542.03}, {"label": "71.5 x 35.5", "white": 377.57, "black": 410.4, "custom": 564.3}, {"label": "59.5 x 47.5", "white": 402.41, "black": 437.4, "custom": 601.43}, {"label": "71.5 x 47.5", "white": 471.96, "black": 513.0, "custom": 705.38}, {"label": "71.5 x 59.5", "white": 591.19, "black": 642.6, "custom": 883.58}], "OXO Sliding": [{"label": "71.5 x 59.5", "white": 1016.78, "black": 1105.2, "custom": 1518.0}, {"label": "95.5 x 35.5", "white": 540.96, "black": 588.0, "custom": 808.5}, {"label": "107.5 x 35.5", "white": 608.58, "black": 661.5, "custom": 909.57}, {"label": "95.5 x 47.5", "white": 721.28, "black": 784.0, "custom": 1078.0}, {"label": "107.5 x 47.5", "white": 811.44, "black": 882.0, "custom": 1212.75}], "Single Hung": [{"label": "23.5 x 35.5", "white": 208.66, "black": 226.8, "custom": 311.85}, {"label": "35.5 x 35.5", "white": 258.34, "black": 280.8, "custom": 386.1}, {"label": "23.5 x 47.5", "white": 238.46, "black": 259.2, "custom": 356.4}, {"label": "23.5 x 59.5", "white": 273.24, "black": 297.0, "custom": 408.38}, {"label": "29.5 x 47.5", "white": 268.27, "black": 291.6, "custom": 400.95}, {"label": "29.5 x 59.5", "white": 308.02, "black": 334.8, "custom": 460.35}, {"label": "35.5 x 53.5", "white": 327.89, "black": 356.4, "custom": 490.05}, {"label": "35.5 x 47.5", "white": 298.08, "black": 324.0, "custom": 445.5}, {"label": "35.5 x 59.5", "white": 347.76, "black": 378.0, "custom": 519.75}, {"label": "47.5 x 59.5", "white": 437.18, "black": 475.2, "custom": 653.4}], "Double Hung": [{"label": "23.5 x 39.5", "white": 352.73, "black": 383.4, "custom": 527.18}, {"label": "35.5 x 39.5", "white": 387.5, "black": 421.2, "custom": 579.15}, {"label": "29.5 x 47.5", "white": 397.44, "black": 432.0, "custom": 594.0}, {"label": "29.5 x 51.5", "white": 417.31, "black": 453.6, "custom": 623.7}, {"label": "35.5 x 47.5", "white": 422.28, "black": 459.0, "custom": 631.12}, {"label": "29.5 x 55.5", "white": 432.22, "black": 469.8, "custom": 645.98}, {"label": "35.5 x 51.5", "white": 437.18, "black": 475.2, "custom": 653.4}, {"label": "35.5 x 55.5", "white": 462.02, "black": 502.2, "custom": 690.53}, {"label": "35.5 x 59.5", "white": 486.86, "black": 529.2, "custom": 727.65}], "Awning": [{"label": "23.5 x 23.5", "white": 303.6, "black": 330.0, "custom": 465.0}, {"label": "23.5 x 29.5", "white": 320.16, "black": 348.0, "custom": 492.0}, {"label": "35.5 x 23.5", "white": 332.58, "black": 361.5, "custom": 512.25}, {"label": "29.5 x 29.5", "white": 336.72, "black": 366.0, "custom": 519.0}, {"label": "29.5 x 35.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "35.5 x 29.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "47.5 x 23.5", "white": 361.56, "black": 393.0, "custom": 559.5}, {"label": "35.5 x 35.5", "white": 369.84, "black": 402.0, "custom": 573.0}, {"label": "47.5 x 29.5", "white": 386.4, "black": 420.0, "custom": 600.0}, {"label": "47.5 x 35.5", "white": 411.24, "black": 447.0, "custom": 640.5}], "Casement (Window)": [{"label": "23.5 x 23.5", "white": 303.6, "black": 330.0, "custom": 465.0}, {"label": "23.5 x 29.5", "white": 320.16, "black": 348.0, "custom": 492.0}, {"label": "23.5 x 35.5", "white": 332.58, "black": 361.5, "custom": 512.25}, {"label": "29.5 x 29.5", "white": 336.72, "black": 366.0, "custom": 519.0}, {"label": "29.5 x 35.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "35.5 x 35.5", "white": 369.84, "black": 402.0, "custom": 573.0}, {"label": "29.5 x 47.5", "white": 386.4, "black": 420.0, "custom": 600.0}, {"label": "35.5 x 47.5", "white": 411.24, "black": 447.0, "custom": 640.5}, {"label": "35.5 x 59.5", "white": 456.78, "black": 496.5, "custom": 714.75}], "Sliding (Door)": [{"label": "72 x 96", "white": 1589.76, "black": 1728.0, "custom": 2376.0}, {"label": "72 x 84", "white": 1440.72, "black": 1566.0, "custom": 2153.25}, {"label": "84 x 84", "white": 1589.76, "black": 1728.0, "custom": 2376.0}, {"label": "192 x 80", "white": 2782.08, "black": 3024.0, "custom": 4158.0}, {"label": "144 x 80", "white": 2235.6, "black": 2430.0, "custom": 3341.25}], "Casement (Door)": [{"label": "36 x 84  (Mesh: Yes)", "white": 1421.4, "black": 1545.0, "custom": 2287.5}, {"label": "36 x 84  (Mesh: No)", "white": 1110.9, "black": 1207.5, "custom": 1781.25}]}};
+  var DATA = {"operations": ["Sliding (Window)", "OXO Sliding", "Single Hung", "Double Hung", "Awning", "Casement (Window)", "Fixed", "Sliding (Door)", "Casement (Door)"], "prices": {"Sliding (Window)": [{"label": "23.5 x 23.5", "white": 154.01, "black": 167.4, "custom": 230.18}, {"label": "35.5 x 23.5", "white": 183.82, "black": 199.8, "custom": 274.73}, {"label": "47.5 x 23.5", "white": 218.59, "black": 237.6, "custom": 326.7}, {"label": "35.5 x 35.5", "white": 228.53, "black": 248.4, "custom": 341.55}, {"label": "35.5 x 47.5", "white": 278.21, "black": 302.4, "custom": 415.8}, {"label": "47.5 x 35.5", "white": 278.21, "black": 302.4, "custom": 415.8}, {"label": "47.5 x 41.5", "white": 308.02, "black": 334.8, "custom": 460.35}, {"label": "59.5 x 35.5", "white": 322.92, "black": 351.0, "custom": 482.63}, {"label": "47.5 x 47.5", "white": 337.82, "black": 367.2, "custom": 504.9}, {"label": "59.5 x 41.5", "white": 362.66, "black": 394.2, "custom": 542.03}, {"label": "71.5 x 35.5", "white": 377.57, "black": 410.4, "custom": 564.3}, {"label": "59.5 x 47.5", "white": 402.41, "black": 437.4, "custom": 601.43}, {"label": "71.5 x 47.5", "white": 471.96, "black": 513.0, "custom": 705.38}, {"label": "71.5 x 59.5", "white": 591.19, "black": 642.6, "custom": 883.58}], "OXO Sliding": [{"label": "71.5 x 59.5", "white": 1016.78, "black": 1105.2, "custom": 1518.0}, {"label": "95.5 x 35.5", "white": 540.96, "black": 588.0, "custom": 808.5}, {"label": "107.5 x 35.5", "white": 608.58, "black": 661.5, "custom": 909.57}, {"label": "95.5 x 47.5", "white": 721.28, "black": 784.0, "custom": 1078.0}, {"label": "107.5 x 47.5", "white": 811.44, "black": 882.0, "custom": 1212.75}], "Single Hung": [{"label": "23.5 x 35.5", "white": 208.66, "black": 226.8, "custom": 311.85}, {"label": "35.5 x 35.5", "white": 258.34, "black": 280.8, "custom": 386.1}, {"label": "23.5 x 47.5", "white": 238.46, "black": 259.2, "custom": 356.4}, {"label": "23.5 x 59.5", "white": 273.24, "black": 297.0, "custom": 408.38}, {"label": "29.5 x 47.5", "white": 268.27, "black": 291.6, "custom": 400.95}, {"label": "29.5 x 59.5", "white": 308.02, "black": 334.8, "custom": 460.35}, {"label": "35.5 x 53.5", "white": 327.89, "black": 356.4, "custom": 490.05}, {"label": "35.5 x 47.5", "white": 298.08, "black": 324.0, "custom": 445.5}, {"label": "35.5 x 59.5", "white": 347.76, "black": 378.0, "custom": 519.75}, {"label": "47.5 x 59.5", "white": 437.18, "black": 475.2, "custom": 653.4}], "Double Hung": [{"label": "23.5 x 39.5", "white": 352.73, "black": 383.4, "custom": 527.18}, {"label": "35.5 x 39.5", "white": 387.5, "black": 421.2, "custom": 579.15}, {"label": "29.5 x 47.5", "white": 397.44, "black": 432.0, "custom": 594.0}, {"label": "29.5 x 51.5", "white": 417.31, "black": 453.6, "custom": 623.7}, {"label": "35.5 x 47.5", "white": 422.28, "black": 459.0, "custom": 631.12}, {"label": "29.5 x 55.5", "white": 432.22, "black": 469.8, "custom": 645.98}, {"label": "35.5 x 51.5", "white": 437.18, "black": 475.2, "custom": 653.4}, {"label": "35.5 x 55.5", "white": 462.02, "black": 502.2, "custom": 690.53}, {"label": "35.5 x 59.5", "white": 486.86, "black": 529.2, "custom": 727.65}], "Awning": [{"label": "23.5 x 23.5", "white": 303.6, "black": 330.0, "custom": 465.0}, {"label": "23.5 x 29.5", "white": 320.16, "black": 348.0, "custom": 492.0}, {"label": "35.5 x 23.5", "white": 332.58, "black": 361.5, "custom": 512.25}, {"label": "29.5 x 29.5", "white": 336.72, "black": 366.0, "custom": 519.0}, {"label": "29.5 x 35.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "35.5 x 29.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "47.5 x 23.5", "white": 361.56, "black": 393.0, "custom": 559.5}, {"label": "35.5 x 35.5", "white": 369.84, "black": 402.0, "custom": 573.0}, {"label": "47.5 x 29.5", "white": 386.4, "black": 420.0, "custom": 600.0}, {"label": "47.5 x 35.5", "white": 411.24, "black": 447.0, "custom": 640.5}], "Casement (Window)": [{"label": "23.5 x 23.5", "white": 303.6, "black": 330.0, "custom": 465.0}, {"label": "23.5 x 29.5", "white": 320.16, "black": 348.0, "custom": 492.0}, {"label": "23.5 x 35.5", "white": 332.58, "black": 361.5, "custom": 512.25}, {"label": "29.5 x 29.5", "white": 336.72, "black": 366.0, "custom": 519.0}, {"label": "29.5 x 35.5", "white": 353.28, "black": 384.0, "custom": 546.0}, {"label": "35.5 x 35.5", "white": 369.84, "black": 402.0, "custom": 573.0}, {"label": "29.5 x 47.5", "white": 386.4, "black": 420.0, "custom": 600.0}, {"label": "35.5 x 47.5", "white": 411.24, "black": 447.0, "custom": 640.5}, {"label": "35.5 x 59.5", "white": 456.78, "black": 496.5, "custom": 714.75}], "Sliding (Door)": [{"label": "59.5 x 79.5", "white": 1143.43, "black": 1243.05, "custom": 1709.28}, {"label": "71.5 x 79.5", "white": 1372.11, "black": 1491.43, "custom": 2050.71}, {"label": "71.5 x 95.5", "white": 1589.76, "black": 1728.0, "custom": 2376.0}, {"label": "143.5 x 79.5", "white": 2235.6, "black": 2430.0, "custom": 3341.25}], "Casement (Door)": [{"label": "35.5 x 83.5", "white": 1110.9, "black": 1207.5, "custom": 1781.25}], "Fixed": [{"label": "23.5 x 23.5", "white": 151.8, "black": 165.0, "custom": 232.5}, {"label": "35.5 x 23.5", "white": 166.29, "black": 180.75, "custom": 256.13}, {"label": "47.5 x 23.5", "white": 180.78, "black": 196.5, "custom": 279.75}, {"label": "35.5 x 35.5", "white": 184.92, "black": 201.0, "custom": 286.5}, {"label": "35.5 x 47.5", "white": 206.21, "black": 224.12, "custom": 321.18}, {"label": "47.5 x 35.5", "white": 206.21, "black": 224.12, "custom": 321.18}, {"label": "47.5 x 41.5", "white": 219.56, "black": 238.63, "custom": 342.94}, {"label": "59.5 x 35.5", "white": 226.16, "black": 245.8, "custom": 353.71}, {"label": "47.5 x 47.5", "white": 232.91, "black": 253.13, "custom": 364.7}, {"label": "59.5 x 41.5", "white": 242.89, "black": 263.98, "custom": 380.97}, {"label": "71.5 x 35.5", "white": 246.12, "black": 267.49, "custom": 386.24}, {"label": "59.5 x 47.5", "white": 259.61, "black": 282.15, "custom": 408.23}, {"label": "71.5 x 47.5", "white": 286.31, "black": 311.16, "custom": 451.75}, {"label": "71.5 x 59.5", "white": 326.5, "black": 354.84, "custom": 517.26}]}};
   var OPERATIONS = DATA.operations;
   var PRICES = DATA.prices;
   var PLACEHOLDER_OP = "Select operation…";
@@ -407,6 +422,7 @@
       else if (color === "Custom Color") base = entry.custom;
       if (glass === "Obscure") base = base * 1.05;
 
+      state.unit = base;
       unitSpan.textContent = fmt.format(base);
       lineSpan.textContent = fmt.format(base * qty);
       state.raw = base * qty;
@@ -485,6 +501,182 @@
   updateIslandGroupState();
 
   document.getElementById("addRowBtn").addEventListener("click", createRow);
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  var FONT_URLS = {
+    reg: "https://cdn.jsdelivr.net/fontsource/fonts/public-sans@5.2.7/latin-400-normal.ttf",
+    bold: "https://cdn.jsdelivr.net/fontsource/fonts/public-sans@5.2.7/latin-700-normal.ttf",
+    title: "https://cdn.jsdelivr.net/fontsource/fonts/archivo@5.2.8/latin-700-normal.ttf"
+  };
+  var fontData = null;
+
+  function toBase64(buf) {
+    var bytes = new Uint8Array(buf), bin = "";
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  function loadPdfFonts() {
+    if (fontData) return Promise.resolve(fontData);
+    function get(url) {
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error("font " + r.status);
+        return r.arrayBuffer();
+      }).then(toBase64);
+    }
+    return Promise.all([get(FONT_URLS.reg), get(FONT_URLS.bold), get(FONT_URLS.title)]).then(function (d) {
+      fontData = { reg: d[0], bold: d[1], title: d[2] };
+      return fontData;
+    });
+  }
+
+  function savePdf() {
+    var btn = document.getElementById("savePdfBtn");
+    btn.disabled = true;
+    loadPdfFonts().catch(function () { return null; }).then(function (fonts) {
+      try { buildPdf(fonts); } finally { btn.disabled = false; }
+    });
+  }
+
+  function buildPdf(fonts) {
+    var lines = rows.filter(function (r) { return r.raw > 0; });
+    if (!lines.length) {
+      alert("Please select at least one item with a quantity before saving the quote.");
+      return;
+    }
+    if (!window.jspdf) {
+      alert("The PDF tool could not load. Please check your internet connection and try again.");
+      return;
+    }
+    var now = new Date();
+    var fileDate = pad2(now.getDate()) + "." + pad2(now.getMonth() + 1) + "." + now.getFullYear();
+    var noteDate = (now.getMonth() + 1) + "/" + now.getDate() + "/" + now.getFullYear();
+    var money = function (v) { return v.replace(/^\$/, ""); };
+
+    var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
+    var REG = "helvetica", BOLD = "helvetica", TITLE = "helvetica", BOLD_STYLE = "bold";
+    if (fonts) {
+      doc.addFileToVFS("PublicSans-Regular.ttf", fonts.reg);
+      doc.addFont("PublicSans-Regular.ttf", "PublicSans", "normal");
+      doc.addFileToVFS("PublicSans-Bold.ttf", fonts.bold);
+      doc.addFont("PublicSans-Bold.ttf", "PublicSans", "bold");
+      doc.addFileToVFS("Archivo-Bold.ttf", fonts.title);
+      doc.addFont("Archivo-Bold.ttf", "Archivo", "bold");
+      REG = "PublicSans"; BOLD = "PublicSans"; TITLE = "Archivo";
+    }
+    var W = doc.internal.pageSize.getWidth();
+    var H = doc.internal.pageSize.getHeight();
+    var L = 54, R = W - 54;
+    var ink = [70, 70, 70], dark = [20, 20, 20];
+
+    function rule(y) { doc.setDrawColor(0, 0, 0); doc.setLineWidth(1); doc.line(L - 3, y, R, y); }
+    function txt(t, x, y, opts) { doc.text(t, x, y, opts || {}); }
+
+    // Header
+    doc.setFont(TITLE, BOLD_STYLE);
+    doc.setFontSize(30);
+    doc.setTextColor(80, 80, 80);
+    txt("Quote", L, 78);
+    var logo = document.querySelector(".quote-hero-logo");
+    if (logo && logo.src) {
+      try { doc.addImage(logo.src, "JPEG", R - 62, 36, 62, 62); } catch (e) {}
+    }
+    doc.setFont(REG, "normal");
+    doc.setFontSize(11.5);
+    doc.setTextColor(ink[0], ink[1], ink[2]);
+    txt("Landmark Building Supply", L, 124);
+    txt("905 Umi St #101 Honolulu HI 96819", L, 142);
+    doc.setTextColor(17, 85, 204);
+    txt("customerservice@landmarkhi.com", R, 124, { align: "right" });
+    var ew = doc.getTextWidth("customerservice@landmarkhi.com");
+    doc.setDrawColor(17, 85, 204); doc.setLineWidth(0.6); doc.line(R - ew, 126, R, 126);
+    doc.link(R - ew, 115, ew, 12, { url: "mailto:customerservice@landmarkhi.com" });
+    doc.setTextColor(ink[0], ink[1], ink[2]);
+    txt("808-466-9683", R, 142, { align: "right" });
+
+
+    // Line items
+    var body = lines.map(function (r) {
+      var qty = Math.max(0, parseInt(r.qtyInput.value, 10) || 0);
+      var desc = r.opSelect.value + "  |  " + r.sizeSelect.value + " in  |  " + r.colorSelect.value + "  |  " + r.glassSelect.value + " glass";
+      return [desc, String(qty), money(fmt.format(r.unit)), "$", money(fmt.format(r.raw))];
+    });
+    doc.autoTable({
+      startY: 172,
+      margin: { left: L - 3, right: W - R, bottom: 60 },
+      head: [["Product or service", "Qty", "Unit Price", "", "Amount"]],
+      body: body,
+      theme: "plain",
+      styles: { font: REG, fontStyle: "normal", fontSize: 11, textColor: ink, cellPadding: { top: 7, bottom: 7, left: 3, right: 3 } },
+      headStyles: { font: BOLD, fontStyle: BOLD_STYLE, textColor: [60, 60, 60] },
+      columnStyles: {
+        1: { halign: "right", cellWidth: 40 },
+        2: { halign: "right", cellWidth: 75 },
+        3: { halign: "right", cellWidth: 22 },
+        4: { halign: "right", cellWidth: 80 }
+      },
+      didParseCell: function (d) { if (d.section === "head" && d.column.index >= 1) d.cell.styles.halign = "right"; },
+      didDrawCell: function (d) {
+        if (d.section === "head") {
+          doc.setDrawColor(0, 0, 0); doc.setLineWidth(1);
+          doc.line(d.cell.x, d.cell.y, d.cell.x + d.cell.width, d.cell.y);
+          doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height);
+        }
+      }
+    });
+
+    // Footer: notes + totals, anchored to the bottom of the last page
+    var footTop = H - 175;
+    if (doc.lastAutoTable.finalY > footTop - 20) { doc.addPage(); }
+    rule(footTop);
+    doc.setFont(REG, "normal");
+    doc.setFontSize(11.5);
+    doc.setTextColor(ink[0], ink[1], ink[2]);
+    txt(noteDate + " NOTES:", L, footTop + 26);
+    var notes = ["Installation fee is not included."];
+    if (fulfillPickup.checked) notes.push("The order is for pickup at 905 Umi St #101.");
+    else if (islandNeighbor.checked) notes.push(deliveryNote.textContent);
+    else notes.push("The order is delivered to the door.");
+    doc.setFontSize(10);
+    var ny = footTop + 52;
+    notes.forEach(function (n) {
+      var w = doc.splitTextToSize(n, 230);
+      txt(w, L, ny); ny += w.length * 13.5;
+    });
+    var midX = W / 2 - 10;
+    doc.setLineWidth(1.2); doc.line(midX, footTop + 32, midX, footTop + 128);
+
+    var labX = R - 104, curX = R - 92;
+    var delivery = document.getElementById("sumDelivery").textContent;
+    var tRows = [
+      ["Subtotal", money(document.getElementById("sumSubtotal").textContent)],
+      ["Delivery Fee", delivery === "TBD" ? "TBD" : money(delivery)],
+      ["Sales Tax", money(document.getElementById("sumTax").textContent)]
+    ];
+    doc.setFontSize(11.5);
+    var ty = footTop + 24;
+    tRows.forEach(function (t) {
+      txt(t[0], labX, ty, { align: "right" });
+      if (t[1] !== "TBD") txt("$", curX, ty);
+      txt(t[1], R - 3, ty, { align: "right" });
+      ty += 22;
+    });
+    doc.setLineWidth(1); doc.line(labX - 105, ty - 12, R, ty - 12);
+    ty += 14;
+    doc.setFont(BOLD, BOLD_STYLE);
+    doc.setFontSize(15);
+    doc.setTextColor(dark[0], dark[1], dark[2]);
+    txt("Grand Total", labX, ty, { align: "right" });
+    var grandStr = money(document.getElementById("sumGrand").textContent);
+    txt("$", Math.min(curX, R - 3 - doc.getTextWidth(grandStr) - doc.getTextWidth("$") - 8), ty);
+    txt(grandStr, R - 3, ty, { align: "right" });
+
+    doc.save("PacificView Quote-" + fileDate + ".pdf");
+  }
+  document.getElementById("savePdfBtn").addEventListener("click", savePdf);
 
   for (var i = 0; i < 10; i++) createRow();
 })();
