@@ -170,7 +170,7 @@
   #islandGroup.disabled { opacity: 0.35; pointer-events: none; }
 
   .summary-bar {
-    display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; justify-content: flex-end;
+    display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: flex-end;
     padding: 14px clamp(16px, 4vw, 40px); background: var(--surface-alt); border-top: 1px solid var(--line);
   }
   .summary-item { text-align: right; }
@@ -179,7 +179,7 @@
   .summary-item.grand .value { font-size: 20px; font-weight: 700; color: var(--warm-strong); }
   .summary-item .note { font-size: 11px; color: var(--ink-soft); max-width: 26ch; margin-top: 2px; }
   .summary-divider { width: 1px; align-self: stretch; background: var(--line); }
-  .summary-disclaimer { margin: 0 auto 0 0; font-size: 12px; font-style: italic; color: var(--ink-soft); }
+  .summary-disclaimer { margin: 0 auto 0 0; flex: 0 1 150px; font-size: 12px; font-style: italic; color: var(--ink-soft); }
 
   @media (max-width: 720px) {
     .summary-bar { justify-content: space-between; }
@@ -241,6 +241,11 @@
 
     <div class="summary-bar">
       <p class="summary-disclaimer">All prices exclude installation.</p>
+      <div class="summary-item">
+        <div class="label">Total Qty</div>
+        <div class="value mono" id="sumQty">0</div>
+      </div>
+      <div class="summary-divider"></div>
       <div class="summary-item">
         <div class="label">Subtotal</div>
         <div class="value mono" id="sumSubtotal">$0.00</div>
@@ -413,6 +418,7 @@
         }
         lineSpan.textContent = "—";
         state.raw = 0;
+        state.qty = 0;
         updateTotals();
         return;
       }
@@ -426,6 +432,7 @@
       unitSpan.textContent = fmt.format(base);
       lineSpan.textContent = fmt.format(base * qty);
       state.raw = base * qty;
+      state.qty = qty;
       updateTotals();
     }
 
@@ -483,6 +490,8 @@
       }
     }
     var grand = subtotal + tax + delivery;
+    var totalQty = rows.reduce(function (sum, r) { return sum + (r.qty || 0); }, 0);
+    document.getElementById("sumQty").textContent = totalQty;
 
     deliveryLabel.textContent = label;
     document.getElementById("sumSubtotal").textContent = fmt.format(subtotal);
@@ -629,7 +638,7 @@
     });
 
     // Footer: notes + totals, anchored to the bottom of the last page
-    var footTop = H - 175;
+    var footTop = H - 195;
     if (doc.lastAutoTable.finalY > footTop - 20) { doc.addPage(); }
     rule(footTop);
     doc.setFont(REG, "normal");
@@ -647,11 +656,12 @@
       txt(w, L, ny); ny += w.length * 13.5;
     });
     var midX = W / 2 - 10;
-    doc.setLineWidth(1.2); doc.line(midX, footTop + 32, midX, footTop + 128);
+    doc.setLineWidth(1.2); doc.line(midX, footTop + 32, midX, footTop + 150);
 
     var labX = R - 104, curX = R - 92;
     var delivery = document.getElementById("sumDelivery").textContent;
     var tRows = [
+      ["Total Qty", document.getElementById("sumQty").textContent, true],
       ["Subtotal", money(document.getElementById("sumSubtotal").textContent)],
       ["Delivery Fee", delivery === "TBD" ? "TBD" : money(delivery)],
       ["Sales Tax", money(document.getElementById("sumTax").textContent)]
@@ -660,7 +670,7 @@
     var ty = footTop + 24;
     tRows.forEach(function (t) {
       txt(t[0], labX, ty, { align: "right" });
-      if (t[1] !== "TBD") txt("$", curX, ty);
+      if (t[1] !== "TBD" && !t[2]) txt("$", curX, ty);
       txt(t[1], R - 3, ty, { align: "right" });
       ty += 22;
     });
