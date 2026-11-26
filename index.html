@@ -218,10 +218,10 @@
           <tr>
             <th></th>
             <th class="col-op">Operation</th>
+            <th class="num col-qty">Qty</th>
             <th class="col-size">Actual Frame Size (W × H, in)</th>
             <th class="col-color">Color</th>
             <th class="col-glass">Glass</th>
-            <th class="num col-qty">Qty</th>
             <th class="num">Unit Price</th>
             <th class="num">Line Total</th>
             <th></th>
@@ -436,6 +436,7 @@
     removeBtn.addEventListener("click", function () { removeRow(state); });
     tdRemove.appendChild(removeBtn);
     tr.appendChild(tdRemove);
+    tr.insertBefore(tdQty, tdSize); // Qty sits right after Operation
 
     state.opSelect = opSelect;
     state.sizeSelect = sizeSelect;
