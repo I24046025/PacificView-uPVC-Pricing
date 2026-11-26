@@ -538,7 +538,7 @@
       if (fee) {
         var feeNote = document.createElement("div");
         feeNote.className = "fee-note";
-        feeNote.textContent = "Incl. custom size fee";
+        feeNote.textContent = "Incl. $" + fee + " custom fee";
         lineSpan.appendChild(feeNote);
       }
       state.raw = base * qty + fee;
@@ -721,7 +721,7 @@
     var body = lines.map(function (r) {
       var qty = Math.max(0, parseInt(r.qtyInput.value, 10) || 0);
       var desc = r.opSelect.value + "  |  " + r.sizeText + "  |  " + r.colorSelect.value + "  |  " + r.glassSelect.value + " glass" +
-        (r.fee ? "  (incl. custom size fee)" : "");
+        (r.fee ? "  (incl. $" + r.fee + " custom fee)" : "");
       return [desc, String(qty), money(fmt.format(r.unit)), "$", money(fmt.format(r.raw))];
     });
     doc.autoTable({
